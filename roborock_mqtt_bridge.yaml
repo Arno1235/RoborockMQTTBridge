@@ -17,7 +17,6 @@ spec:
         - name: rr2mqtt
           image: localhost:32000/roborock_mqtt_bridge:arm
           imagePullPolicy: IfNotPresent
-          restartPolicy: Always
           env:
               - name: RR_EMAIL
                 value: "xxx"
