@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rr2mqtt
+  namespace: iot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rr2mqtt
+  template:
+    metadata:
+      labels:
+        app: rr2mqtt
+    spec:
+      containers:
+        - name: rr2mqtt
+          image: localhost:32000/roborock_mqtt_bridge:arm
+          imagePullPolicy: IfNotPresent
+          restartPolicy: Always
+          env:
+              - name: RR_EMAIL
+                value: "xxx"
+              - name: RR_PASSWORD
+                value: "xxx"
+              - name: RR_DEVICE_ID
+                value: "xxx"
+              - name: MQTT_BROKER
+                value: "xxx"
+              - name: MQTT_PORT
+                value: "xxx"
+              - name: MQTT_TOPIC_PREFIX
+                value: "xxx"
+              - name: MQTT_USER
+                value: "xxx"
+              - name: MQTT_PASSWORD
+                value: "xxx"
+              - name: POLLING_INTERVAL
+                value: "xxx"
+              - name: DEVICE_UPDATE_INTERVAL
+                value: "xxx"
+              - name: PUSH_TO_HOMEASSISTANT
+                value: "xxx"
+          livenessProbe:
+            exec:
+              command: ["bash", "-c", "pgrep -f roborock_MQTT_bridge.py"]
+            initialDelaySeconds: 10
+            periodSeconds: 20
