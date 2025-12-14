@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: rr2mqtt
-          image: localhost:32000/roborock_mqtt_bridge8:arm
+          image: localhost:32000/roborock_mqtt_bridge:arm
           imagePullPolicy: IfNotPresent
           env:
               - name: RR_EMAIL
