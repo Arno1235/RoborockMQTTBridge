@@ -15,33 +15,45 @@ spec:
     spec:
       containers:
         - name: rr2mqtt
-          image: localhost:32000/roborock_mqtt_bridge:arm
+          image: localhost:32000/roborock_mqtt_bridge8:arm
           imagePullPolicy: IfNotPresent
           env:
               - name: RR_EMAIL
-                value: "xxx"
+                value: "sprekendeklok@gmail.com"
               - name: RR_PASSWORD
-                value: "xxx"
+                value: "zihzuv-4wifpy-nYpguf"
               - name: RR_DEVICE_ID
-                value: "xxx"
+                value: "7X5ZCIiHsvrzbBdl65Whly"
               - name: MQTT_BROKER
-                value: "xxx"
+                value: "192.168.1.101"
               - name: MQTT_PORT
-                value: "xxx"
+                value: "1883"
               - name: MQTT_TOPIC_PREFIX
-                value: "xxx"
+                value: "living/robot_vacuum"
               - name: MQTT_USER
-                value: "xxx"
+                value: "rr2mqtt"
               - name: MQTT_PASSWORD
-                value: "xxx"
+                value: "Ropjur-qurhev-fazsi7"
               - name: POLLING_INTERVAL
-                value: "xxx"
+                value: "60"
               - name: DEVICE_UPDATE_INTERVAL
-                value: "xxx"
+                value: "86400"
               - name: PUSH_TO_HOMEASSISTANT
-                value: "xxx"
+                value: "True"
+              - name: LOGIN_DATA_PATH
+                value: "/data/login.json"
           livenessProbe:
             exec:
               command: ["bash", "-c", "pgrep -f roborock_MQTT_bridge.py"]
             initialDelaySeconds: 10
-            periodSeconds: 20
+            periodSeconds: 2
+
+          volumeMounts:
+            - name: roborock-login
+              mountPath: /data
+              readOnly: true
+
+      volumes:
+        - name: roborock-login
+          secret:
+            secretName: roborock-login
