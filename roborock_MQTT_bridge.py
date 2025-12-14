@@ -5,7 +5,7 @@ import time
 
 from roborock import RoborockException
 from roborock.web_api import RoborockApiClient
-# from roborock.cli import RoborockContext, _discover
+from roborock.cli import RoborockContext, _discover
 from roborock.containers import DeviceData, LoginData
 from roborock.version_1_apis.roborock_mqtt_client_v1 import RoborockMqttClientV1
 from roborock import RoborockCommand
