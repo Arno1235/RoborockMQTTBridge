@@ -41,6 +41,7 @@ print(f"PUSH_TO_HOMEASSISTANT = {PUSH_TO_HOMEASSISTANT}")
 print()
 
 
+
 class CtxObj:
     def __init__(self, ctx):
         self.obj = ctx
@@ -99,15 +100,15 @@ class RoborockMQTTBridge:
         )
 
     async def login_rr(self):
-        # self.ctx = CtxObj(RoborockContext())
+        self.ctx = CtxObj(RoborockContext())
 
-        # context: RoborockContext = self.ctx.obj
-        # try:
-        #     context.validate()
-        #     print("Already logged in")
-        #     return
-        # except RoborockException:
-        #     pass
+        context: RoborockContext = self.ctx.obj
+        try:
+            context.validate()
+            print("Already logged in")
+            return
+        except RoborockException:
+            pass
 
         client = RoborockApiClient(self.rr_email)
         self.user_data = None
@@ -115,11 +116,7 @@ class RoborockMQTTBridge:
         try:
             print("Trying to login using password")
             self.user_data = await client.pass_login(self.rr_password)
-            # context.update(LoginData(user_data=self.user_data, email=self.rr_email))
-            self.login_data = LoginData(
-                user_data=self.user_data,
-                email=self.rr_email,
-            )
+            context.update(LoginData(user_data=self.user_data, email=self.rr_email))
             return
         except:
             pass
@@ -129,11 +126,7 @@ class RoborockMQTTBridge:
             await client.request_code()
             code = input("code:")
             self.user_data = await client.code_login(code)
-            # context.update(LoginData(user_data=self.user_data, email=self.rr_email))
-            self.login_data = LoginData(
-                user_data=self.user_data,
-                email=self.rr_email,
-            )
+            context.update(LoginData(user_data=self.user_data, email=self.rr_email))
             return
         except:
             pass
@@ -148,16 +141,12 @@ class RoborockMQTTBridge:
             device['device_mqtt_client'].__del__()
         self.devices = {}
 
-        # context: RoborockContext = self.ctx.obj
-        # login_data = context.login_data()
-        # if not login_data.home_data:
-        #     await _discover(self.ctx)
-        #     login_data = context.login_data()
-        # home_data = login_data.home_data
-
-        home_data = self.login_data.home_data
-        if not home_data:
-            raise RuntimeError("No home data received from Roborock API")
+        context: RoborockContext = self.ctx.obj
+        login_data = context.login_data()
+        if not login_data.home_data:
+            await _discover(self.ctx)
+            login_data = context.login_data()
+        home_data = login_data.home_data
 
         devices = home_data.devices + home_data.received_devices
 
@@ -179,7 +168,7 @@ class RoborockMQTTBridge:
                 continue
 
             device_info = DeviceData(device=device, model=model)
-            device_mqtt_client = RoborockMqttClientV1(self.login_data.user_data, device_info)
+            device_mqtt_client = RoborockMqttClientV1(login_data.user_data, device_info)
 
             self.devices[device.duid] = {
                 'device': device,
@@ -328,6 +317,7 @@ async def main():
 
     finally:
         bridge.cleanup()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
