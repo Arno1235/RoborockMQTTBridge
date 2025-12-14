@@ -25,6 +25,7 @@ MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 POLLING_INTERVAL = int(os.getenv("POLLING_INTERVAL", "60"))
 DEVICE_UPDATE_INTERVAL = int(os.getenv("DEVICE_UPDATE_INTERVAL", "86400"))
 PUSH_TO_HOMEASSISTANT = bool(os.getenv("PUSH_TO_HOMEASSISTANT", "False"))
+LOGIN_DATA_PATH = os.getenv("LOGIN_DATA_PATH")
 
 print("Starting with:")
 print(f"RR_EMAIL = {RR_EMAIL}")
@@ -38,6 +39,7 @@ print(f"MQTT_PASSWORD = {MQTT_PASSWORD}")
 print(f"POLLING_INTERVAL = {POLLING_INTERVAL}")
 print(f"DEVICE_UPDATE_INTERVAL = {DEVICE_UPDATE_INTERVAL}")
 print(f"PUSH_TO_HOMEASSISTANT = {PUSH_TO_HOMEASSISTANT}")
+print(f"LOGIN_DATA_PATH = {LOGIN_DATA_PATH}")
 print()
 
 
@@ -47,7 +49,7 @@ class CtxObj:
         self.obj = ctx
 
 class RoborockMQTTBridge:
-    def __init__(self, rr_email, rr_password, rr_device_id, mqtt_broker, mqtt_port, mqtt_topic_prefix, mqtt_user, mqtt_password, polling_interval, device_update_interval, homeassistant):
+    def __init__(self, rr_email, rr_password, rr_device_id, mqtt_broker, mqtt_port, mqtt_topic_prefix, mqtt_user, mqtt_password, polling_interval, device_update_interval, homeassistant, login_data_path):
         self.rr_email = rr_email
         self.rr_password = rr_password
         self.rr_device_id = rr_device_id
@@ -62,6 +64,7 @@ class RoborockMQTTBridge:
         self.polling_interval = polling_interval
         self.device_update_interval = device_update_interval
         self.homeassistant = homeassistant
+        self.login_data_path = login_data_path
     
     async def setup(self):
 
@@ -110,13 +113,26 @@ class RoborockMQTTBridge:
         except RoborockException:
             pass
 
+        if os.path.exists(self.login_data_path):
+            print("Loading cached Roborock login data")
+            with open(self.login_data_path, "r") as f:
+                data = json.load(f)
+            context.update(LoginData.from_dict(data))
+            return
+
         client = RoborockApiClient(self.rr_email)
         self.user_data = None
 
         try:
             print("Trying to login using password")
             self.user_data = await client.pass_login(self.rr_password)
-            context.update(LoginData(user_data=self.user_data, email=self.rr_email))
+            login_data = LoginData(user_data=self.user_data, email=self.rr_email)
+            context.update(login_data)
+
+            os.makedirs(os.path.dirname(self.login_data_path), exist_ok=True)
+            with open(self.login_data_path, "w") as f:
+                json.dump(login_data.as_dict(), f)
+
             return
         except:
             pass
@@ -126,7 +142,13 @@ class RoborockMQTTBridge:
             await client.request_code()
             code = input("code:")
             self.user_data = await client.code_login(code)
-            context.update(LoginData(user_data=self.user_data, email=self.rr_email))
+            login_data = LoginData(user_data=self.user_data, email=self.rr_email)
+            context.update(login_data)
+
+            os.makedirs(os.path.dirname(self.login_data_path), exist_ok=True)
+            with open(self.login_data_path, "w") as f:
+                json.dump(login_data.as_dict(), f)
+
             return
         except:
             pass
@@ -304,6 +326,7 @@ async def main():
         polling_interval=POLLING_INTERVAL,
         device_update_interval=DEVICE_UPDATE_INTERVAL,
         homeassistant=PUSH_TO_HOMEASSISTANT,
+        login_data_path=LOGIN_DATA_PATH,
     )
 
     try:
