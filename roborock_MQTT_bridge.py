@@ -235,9 +235,7 @@ class RoborockMQTTBridge:
         
         for k, v in payload_dict.items():
             if f"{sub_parent_topic}/{k}" not in self.topic_filter:
-                print(f"{sub_parent_topic}/{k} not in topic filters")
                 continue
-            print(f"{sub_parent_topic}/{k} in topic filter")
             payload = json.dumps(v, default=str)
             self.mqtt_client.publish(f"{parent_topic}/{k}", payload, retain=retain)
             topics.append(k)
