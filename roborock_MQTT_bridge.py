@@ -291,6 +291,7 @@ class RoborockMQTTBridge:
         device_update_time = time.time()
     
         while True:
+            print("poll device")
             try:
                 if time.time() - device_update_time > self.device_update_interval:
                     await self.update_devices()
