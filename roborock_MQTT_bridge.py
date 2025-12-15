@@ -74,7 +74,7 @@ class RoborockMQTTBridge:
         if os.path.exists(topic_filter_path):
             print("Loading topic filters")
             with open(topic_filter_path, 'r') as f:
-                self.topic_filter = yaml.safe_load(f)
+                self.topic_filter = yaml.safe_load(f)['topics']
             print("topic filters:")
             print(self.topic_filter)
     
