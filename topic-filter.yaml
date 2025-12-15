@@ -103,6 +103,7 @@ topics:
     # - "device_info/tuya_migrated"
     # - "device_info/tuya_uuid"
 
+    - "rr2mqtt/version"
     - "rr2mqtt/device_update_interval"
     - "rr2mqtt/mqtt_broker"
     - "rr2mqtt/mqtt_port"

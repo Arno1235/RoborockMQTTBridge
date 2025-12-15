@@ -102,6 +102,7 @@ class RoborockMQTTBridge:
         topics = self.publish_to_mqtt(
             parent_topic='rr2mqtt',
             data={
+                'version': version,
                 'rr_email': self.rr_email,
                 'rr_device_id': self.rr_device_id,
                 'mqtt_broker': self.mqtt_broker,
@@ -110,7 +111,6 @@ class RoborockMQTTBridge:
                 'mqtt_user': self.mqtt_user,
                 'polling_interval': self.polling_interval,
                 'device_update_interval': self.device_update_interval,
-                'version': version,
             },
             retain=True,
         )[1]
