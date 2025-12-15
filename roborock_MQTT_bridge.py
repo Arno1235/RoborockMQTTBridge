@@ -221,6 +221,7 @@ class RoborockMQTTBridge:
 
     def publish_to_mqtt(self, parent_topic, data, retain=False):
         """Publish data to MQTT"""
+        sub_parent_topic = parent_topic
         parent_topic = f"{self.mqtt_topic_prefix}/{parent_topic}"
 
         topics = []
@@ -232,10 +233,10 @@ class RoborockMQTTBridge:
             payload_dict = data
         
         for k, v in payload_dict.items():
-            if f"{parent_topic}/{k}" not in self.topic_filter:
-                print(f"{parent_topic}/{k} not in topic filters")
+            if f"{sub_parent_topic}/{k}" not in self.topic_filter:
+                print(f"{sub_parent_topic}/{k} not in topic filters")
                 continue
-            print(f"{parent_topic}/{k} in topic filter")
+            print(f"{sub_parent_topic}/{k} in topic filter")
             payload = json.dumps(v, default=str)
             self.mqtt_client.publish(f"{parent_topic}/{k}", payload, retain=retain)
             topics.append(k)
