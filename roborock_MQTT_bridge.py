@@ -238,7 +238,7 @@ class RoborockMQTTBridge:
                 continue
             payload = json.dumps(v, default=str)
             self.mqtt_client.publish(f"{parent_topic}/{k}", payload, retain=retain)
-            topics.append(k)
+            topics.append(f"{parent_topic}/{k}")
         
         return payload_dict, topics
 
