@@ -3,6 +3,7 @@ import asyncio
 import json
 import time
 import yaml
+from aiohttp import web
 
 from roborock import RoborockException
 from roborock.web_api import RoborockApiClient
@@ -348,6 +349,15 @@ class RoborockMQTTBridge:
 
         self.mqtt_client.publish(f"homeassistant/device/{self.rr_device_id}/config", json.dumps(payload, default=str), retain=True)
 
+async def health_app():
+    app = web.Application()
+
+    async def health(_):
+        return web.Response(text="ok")
+
+    app.router.add_get("/healthz", health)
+    return app
+
 async def main():
 
     bridge = RoborockMQTTBridge(
@@ -365,6 +375,13 @@ async def main():
         login_data_path=LOGIN_DATA_PATH,
         topic_filter_path=TOPIC_FILTER_PATH,
     )
+
+    # start health server
+    app = await health_app()
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8080)
+    await site.start()
 
     try:
         await bridge.setup()
