@@ -13,6 +13,7 @@ from roborock import RoborockCommand
 
 import paho.mqtt.client as mqtt
 
+version = 0.3
 
 # config
 RR_EMAIL = os.getenv("RR_EMAIL")
@@ -27,9 +28,10 @@ POLLING_INTERVAL = int(os.getenv("POLLING_INTERVAL", "60"))
 DEVICE_UPDATE_INTERVAL = int(os.getenv("DEVICE_UPDATE_INTERVAL", "86400"))
 PUSH_TO_HOMEASSISTANT = bool(os.getenv("PUSH_TO_HOMEASSISTANT", "False"))
 LOGIN_DATA_PATH = os.getenv("LOGIN_DATA_PATH")
-TOPIC_FILTER_PATH = os.getenv("TOPIC_FILER_PATH")
+TOPIC_FILTER_PATH = os.getenv("TOPIC_FILTER_PATH")
 
 print("Starting with:")
+print(f"version = {version}")
 print(f"RR_EMAIL = {RR_EMAIL}")
 print(f"RR_PASSWORD = {RR_PASSWORD}")
 print(f"RR_DEVICE_ID = {RR_DEVICE_ID}")
@@ -108,6 +110,7 @@ class RoborockMQTTBridge:
                 'mqtt_user': self.mqtt_user,
                 'polling_interval': self.polling_interval,
                 'device_update_interval': self.device_update_interval,
+                'version': version,
             },
             retain=True,
         )[1]
