@@ -13,4 +13,6 @@ sudo k3s ctr images push localhost:32000/roborock_mqtt_bridge:arm
 
 ```
 kubectl -n iot create secret generic roborock-login --from-file=login.json
+
+kubectl -n iot create secret generic topic-filter --from-file=topic-filter.yaml
 ```
