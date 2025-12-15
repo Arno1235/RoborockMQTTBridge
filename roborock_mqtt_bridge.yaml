@@ -37,11 +37,13 @@ spec:
               - name: POLLING_INTERVAL
                 value: "60"
               - name: DEVICE_UPDATE_INTERVAL
-                value: "86400"
+                value: "3600"
               - name: PUSH_TO_HOMEASSISTANT
                 value: "True"
               - name: LOGIN_DATA_PATH
                 value: "/data/login.json"
+              - name: TOPIC_FILTER_PATH
+                value: "/topic-data/topic-filter.yaml"
           livenessProbe:
             exec:
               command: ["bash", "-c", "pgrep -f roborock_MQTT_bridge.py"]
@@ -52,8 +54,15 @@ spec:
             - name: roborock-login
               mountPath: /data
               readOnly: true
+            - name: topic-filter
+              mountPath: /topic-data
+              readOnly: true
 
       volumes:
         - name: roborock-login
           secret:
             secretName: roborock-login
+        - name: topic-filter
+          secret:
+            secretName: topic-filter
+
