@@ -19,3 +19,4 @@ pyshark==0.6
 python-roborock==2.6.0
 termcolor==2.4.0
 yarl==1.11.1
+PyYAML==6.0.3

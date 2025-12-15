@@ -2,6 +2,7 @@ import os
 import asyncio
 import json
 import time
+import yaml
 
 from roborock import RoborockException
 from roborock.web_api import RoborockApiClient
@@ -26,6 +27,7 @@ POLLING_INTERVAL = int(os.getenv("POLLING_INTERVAL", "60"))
 DEVICE_UPDATE_INTERVAL = int(os.getenv("DEVICE_UPDATE_INTERVAL", "86400"))
 PUSH_TO_HOMEASSISTANT = bool(os.getenv("PUSH_TO_HOMEASSISTANT", "False"))
 LOGIN_DATA_PATH = os.getenv("LOGIN_DATA_PATH")
+TOPIC_FILTER_PATH = os.getenv("TOPIC_FILER_PATH")
 
 print("Starting with:")
 print(f"RR_EMAIL = {RR_EMAIL}")
@@ -40,6 +42,7 @@ print(f"POLLING_INTERVAL = {POLLING_INTERVAL}")
 print(f"DEVICE_UPDATE_INTERVAL = {DEVICE_UPDATE_INTERVAL}")
 print(f"PUSH_TO_HOMEASSISTANT = {PUSH_TO_HOMEASSISTANT}")
 print(f"LOGIN_DATA_PATH = {LOGIN_DATA_PATH}")
+print(f"TOPIC_FILTER_PATH = {TOPIC_FILTER_PATH}")
 print()
 
 
@@ -49,7 +52,7 @@ class CtxObj:
         self.obj = ctx
 
 class RoborockMQTTBridge:
-    def __init__(self, rr_email, rr_password, rr_device_id, mqtt_broker, mqtt_port, mqtt_topic_prefix, mqtt_user, mqtt_password, polling_interval, device_update_interval, homeassistant, login_data_path):
+    def __init__(self, rr_email, rr_password, rr_device_id, mqtt_broker, mqtt_port, mqtt_topic_prefix, mqtt_user, mqtt_password, polling_interval, device_update_interval, homeassistant, login_data_path, topic_filter_path):
         self.rr_email = rr_email
         self.rr_password = rr_password
         self.rr_device_id = rr_device_id
@@ -65,18 +68,25 @@ class RoborockMQTTBridge:
         self.device_update_interval = device_update_interval
         self.homeassistant = homeassistant
         self.login_data_path = login_data_path
+
+        if os.path.exists(topic_filter_path):
+            print("Loading topic filters")
+            with open(topic_filter_path, 'r') as f:
+                self.topic_filter = yaml.load(f)
+            print("topic filters:")
+            print(self.topic_filter)
     
     async def setup(self):
 
-        self.connect_mqtt()
+        topics = self.connect_mqtt()
 
         await self.login_rr()
 
         self.devices = {}
-        await self.update_devices()
+        topics += await self.update_devices()
 
         if self.homeassistant:
-            await self.push_config_to_homeassistant()
+            await self.push_config_to_homeassistant(topics)
 
         return
 
@@ -87,7 +97,7 @@ class RoborockMQTTBridge:
         self.mqtt_client.loop_start()
         print(f"Connected to MQTT broker at {self.mqtt_broker}:{self.mqtt_port}")
 
-        self.publish_to_mqtt(
+        topics = self.publish_to_mqtt(
             parent_topic='rr2mqtt',
             data={
                 'rr_email': self.rr_email,
@@ -100,7 +110,9 @@ class RoborockMQTTBridge:
                 'device_update_interval': self.device_update_interval,
             },
             retain=True,
-        )
+        )[1]
+
+        return topics
 
     async def login_rr(self):
         self.ctx = CtxObj(RoborockContext())
@@ -175,6 +187,8 @@ class RoborockMQTTBridge:
         print("Devices found:")
         print(", ".join([f"{device.name}: {device.duid}" for device in devices]))
 
+        topics = []
+
         for device in devices:
             if device.duid != self.rr_device_id:
                 print(f'Skipping device as it does not have the correct id: {device.duid}')
@@ -198,13 +212,15 @@ class RoborockMQTTBridge:
                 'device_mqtt_client': device_mqtt_client,
             }
 
-            self.publish_to_mqtt("device_info", device, retain=True)
+            topics += self.publish_to_mqtt("device_info", device, retain=True)[1]
         
-        return
+        return topics
 
     def publish_to_mqtt(self, parent_topic, data, retain=False):
         """Publish data to MQTT"""
         parent_topic = f"{self.mqtt_topic_prefix}/{parent_topic}"
+
+        topics = []
         
         # Convert data to dict if it's not already
         if hasattr(data, '__dict__'):
@@ -213,10 +229,13 @@ class RoborockMQTTBridge:
             payload_dict = data
         
         for k, v in payload_dict.items():
+            if k not in self.topic_filter:
+                continue
             payload = json.dumps(v, default=str)
             self.mqtt_client.publish(f"{parent_topic}/{k}", payload, retain=retain)
+            topics.append(k)
         
-        return payload_dict
+        return payload_dict, topics
 
     async def rr_command(self, device, cmd, params=None):
         try:
@@ -244,19 +263,19 @@ class RoborockMQTTBridge:
         UDT = {}
         r = await self.rr_command(device, RoborockCommand.GET_STATUS)
         if r is not None:
-            UDT['status'] = self.publish_to_mqtt("status", r)
+            UDT['status'] = self.publish_to_mqtt("status", r)[0]
 
         r = await self.rr_command(device, RoborockCommand.GET_CONSUMABLE)
         if r is not None:
-            UDT['consumable'] = self.publish_to_mqtt("consumable", r)
+            UDT['consumable'] = self.publish_to_mqtt("consumable", r)[0]
 
         r = await self.rr_command(device, RoborockCommand.GET_CLEAN_SUMMARY)
         if r is not None:
-            UDT['clean_summary'] = self.publish_to_mqtt("clean_summary", r)
+            UDT['clean_summary'] = self.publish_to_mqtt("clean_summary", r)[0]
 
         r = await self.rr_command(device, RoborockCommand.GET_NETWORK_INFO)
         if r is not None:
-            UDT['network_info'] = self.publish_to_mqtt("network_info", r)
+            UDT['network_info'] = self.publish_to_mqtt("network_info", r)[0]
         
         return UDT
     
@@ -281,7 +300,7 @@ class RoborockMQTTBridge:
             
             await asyncio.sleep(self.polling_interval)
 
-    async def push_config_to_homeassistant(self):
+    async def push_config_to_homeassistant(self, topics):
         UDT = await self.device_poll(self.devices[self.rr_device_id])
 
         payload = {
@@ -309,6 +328,16 @@ class RoborockMQTTBridge:
                     "qos": 0
                 }
                 index += 1
+        
+        for topic in topics:
+            payload["cmps"][topic] = {
+                "platform": "sensor",
+                "name": topic,
+                "state_topic": f"{self.mqtt_topic_prefix}/{topic}",
+                "unique_id": f"{self.rr_device_id}_{topic}",
+                "qos": 0
+            }
+            index += 1
 
         self.mqtt_client.publish(f"homeassistant/device/{self.rr_device_id}/config", json.dumps(payload, default=str), retain=True)
 
@@ -327,6 +356,7 @@ async def main():
         device_update_interval=DEVICE_UPDATE_INTERVAL,
         homeassistant=PUSH_TO_HOMEASSISTANT,
         login_data_path=LOGIN_DATA_PATH,
+        topic_filter_path=TOPIC_FILTER_PATH,
     )
 
     try:
